@@ -37,16 +37,49 @@ void Powermust::loop() {
         break;
     }
   }
-  if (this->state_ == STATE_COMMAND_COMPLETE) {
+if (this->state_ == STATE_COMMAND_COMPLETE) {
+  bool success = false;
+
+  // Comandos que devuelven ACK (como T, TL, S, etc.)
+  std::string current_cmd = this->command_queue_[this->command_queue_position_];
+
+  bool is_ack_command = (current_cmd == "T" || 
+                         current_cmd == "TL" || 
+                         current_cmd == "S" || 
+                         current_cmd == "CT" || 
+                         current_cmd == "C");
+
+  if (is_ack_command) {
+    // Éxito si recibimos algo que NO sea NAK
     if (this->read_pos_ > 0) {
-      ESP_LOGE(TAG, "Command not successful");
+      // Limpiar \r si existe
+      if (this->read_buffer_[this->read_pos_ - 1] == '\r') {
+        this->read_buffer_[--this->read_pos_] = '\0';
+      }
+      if (this->read_pos_ >= 3 && memcmp(this->read_buffer_, "NAK", 3) == 0) {
+        ESP_LOGE(TAG, "Command failed: NAK");
+      } else {
+        ESP_LOGI(TAG, "Command successful: ACK received");
+        success = true;
+      }
     } else {
-      ESP_LOGI(TAG, "Command successful");
+      ESP_LOGE(TAG, "Command failed: no response");
     }
-    this->command_queue_[this->command_queue_position_] = std::string("");
-    this->command_queue_position_ = (command_queue_position_ + 1) % COMMAND_QUEUE_LENGTH;
-    this->state_ = STATE_IDLE;
+  } else {
+    // Comandos que NO deben responder (ej: algunos futuros)
+    if (this->read_pos_ == 0) {
+      ESP_LOGI(TAG, "Command successful: no response expected");
+      success = true;
+    } else {
+      ESP_LOGE(TAG, "Command failed: unexpected response");
+    }
   }
+
+  // Limpiar cola
+  this->command_queue_[this->command_queue_position_].clear();
+  this->command_queue_position_ = (this->command_queue_position_ + 1) % COMMAND_QUEUE_LENGTH;
+  this->state_ = STATE_IDLE;
+}
 
   if (this->state_ == STATE_POLL_DECODED) {
     switch (this->used_polling_commands_[this->last_polling_command_].identifier) {
