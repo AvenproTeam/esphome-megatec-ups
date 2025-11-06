@@ -132,39 +132,47 @@ void Powermust::loop() {
     char tmp[POWERMUST_READ_BUFFER_LENGTH];
     sprintf(tmp, "%s", this->read_buffer_);
     switch (this->used_polling_commands_[this->last_polling_command_].identifier) {
-      case POLLING_Q1:
+      case POLLING_Q1: { // Usamos llaves para crear un scope local
         ESP_LOGD(TAG, "Decode Q1");
-        // (232.9 232.9 232.9 003 49.9 13.4 25.0 00001000\r
-        // (005.2 232.4 226.8 002 50.1 12.9 25.0 10001000\r
-        //                                 1  2  3  4  5  6  7  8
-        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %f %1d%1d%1d%1d%1d%1d%1d%1d",  // NOLINT
-               &value_grid_voltage_,                                   // NOLINT
-               &value_grid_fault_voltage_,                             // NOLINT
-               &value_ac_output_voltage_,                              // NOLINT
-               &value_ac_output_load_percent_,                         // NOLINT
-               &value_grid_frequency_,                                 // NOLINT
-               &value_battery_voltage_,                                // NOLINT
-               &value_temperature_,                                    // NOLINT
-               &value_utility_fail_,                                   // NOLINT
-               &value_battery_low_,                                    // NOLINT
-               &value_bypass_active_,                                  // NOLINT
-               &value_ups_failed_,                                     // NOLINT
-               &value_ups_type_standby_,                               // NOLINT
-               &value_test_in_progress_,                               // NOLINT
-               &value_shutdown_active_,                                // NOLINT
-               &value_beeper_on_);                                     // NOLINT
-
-        // --- AÑADE ESTA LÍNEA DE DEPURACIÓN ---
-        if (items_assigned < 15) {
-          ESP_LOGW(TAG, "sscanf Q1 falló! Solo asignó %d de 15 items. Trama: %s", items_assigned, tmp);
-        }
-        // --- FIN DE LÍNEA DE DEPURACIÓN ---
+        char status_bits[16]; // Un buffer para guardar los bits: "00001001"
         
+        // Aquí declaramos 'items_assigned'
+        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %f %15s", // Lee los bits como una cadena
+               &value_grid_voltage_,
+               &value_grid_fault_voltage_,
+               &value_ac_output_voltage_,
+               &value_ac_output_load_percent_,
+               &value_grid_frequency_,
+               &value_battery_voltage_,
+               &value_temperature_,
+               status_bits); // Guarda "00001001\r" aquí
+
+        // Comprobamos la variable (ahora esperamos 8 items)
+        if (items_assigned < 8) {
+          ESP_LOGW(TAG, "sscanf Q1 falló! Solo asignó %d de 8 items. Trama: %s", items_assigned, tmp);
+          this->state_ = STATE_IDLE; // Abortar
+          break; // Salir del case
+        }
+
+        // Ahora, 'status_bits' contiene algo como "00001001".
+        // Lo parseamos manualmente, comprobando la longitud (strlen)
+        size_t len = strlen(status_bits);
+
+        value_utility_fail_     = (len >= 1 && status_bits[0] == '1') ? 1 : 0;
+        value_battery_low_      = (len >= 2 && status_bits[1] == '1') ? 1 : 0;
+        value_bypass_active_    = (len >= 3 && status_bits[2] == '1') ? 1 : 0;
+        value_ups_failed_       = (len >= 4 && status_bits[3] == '1') ? 1 : 0;
+        value_ups_type_standby_ = (len >= 5 && status_bits[4] == '1') ? 1 : 0;
+        value_test_in_progress_ = (len >= 6 && status_bits[5] == '1') ? 1 : 0;
+        value_shutdown_active_  = (len >= 7 && status_bits[6] == '1') ? 1 : 0;
+        value_beeper_on_        = (len >= 8 && status_bits[7] == '1') ? 1 : 0;
+
         if (this->last_q1_) {
           this->last_q1_->publish_state(tmp);
         }
         this->state_ = STATE_POLL_DECODED;
         break;
+      } // Fin del scope
       case POLLING_F:
         ESP_LOGD(TAG, "Decode F");
         // "#220.0 003 12.00 50.0\r"
