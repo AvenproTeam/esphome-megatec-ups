@@ -137,7 +137,7 @@ void Powermust::loop() {
         // (232.9 232.9 232.9 003 49.9 13.4 25.0 00001000\r
         // (005.2 232.4 226.8 002 50.1 12.9 25.0 10001000\r
         //                                 1  2  3  4  5  6  7  8
-        sscanf(tmp, "(%f %f %f %d %f %f %f %1d%1d%1d%1d%1d%1d%1d%1d",  // NOLINT
+        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %f %1d%1d%1d%1d%1d%1d%1d%1d",  // NOLINT
                &value_grid_voltage_,                                   // NOLINT
                &value_grid_fault_voltage_,                             // NOLINT
                &value_ac_output_voltage_,                              // NOLINT
