@@ -42,7 +42,7 @@ ICONS = {
     CONF_TEN_MINUTES_TEST: ICON_TIMER,
     CONF_SHUTDOWN: "mdi:power-plug-off",
     CONF_SHUTDOWN_RESTORE: "mdi:restart",
-    CONF_CANCEL_SHUTDOWN: ICON_CANCEL,
+    CONF_CANCEL_SHUTDOWN: "mdi:cancel",
 }
 
 PowermustSwitch = powermust_ns.class_("PowermustSwitch", switch.Switch, cg.Component)
