@@ -1,20 +1,22 @@
 substitutions:
-  name: powermust
-  device_description: "Monitor and control a Mustek Powermust 800 via RS232"
-  external_components_source: github://syssi/esphome-powermust@main
+  name: PowerProof 600 UPS
+  device_description: "Monitor and control any Megatec Protocol based UPS via TTL UART"
+  external_components_source: github://nelio12/esphome-megatec-ups@main-dev
   tx_pin: GPIO16
   rx_pin: GPIO17
 
 esphome:
-  name: ${name}
+  name: esphome-web-a70578
+  friendly_name: NodeMCU Test taller
+  min_version: 2025.9.0
+  name_add_mac_suffix: false
   comment: ${device_description}
-  min_version: 2024.6.0
   project:
-    name: "syssi.esphome-powermust"
+    name: "nelio12.esphome-megatec-ups"
     version: 1.1.0
 
 esp32:
-  board: wemos_d1_mini32
+  variant: esp32
   framework:
     type: esp-idf
 
@@ -61,65 +63,86 @@ binary_sensor:
   - platform: powermust
     powermust_id: powermust0
     utility_fail:
-      name: "${name} utility fail"
+      name: "Utility Fail"
     battery_low:
-      name: "${name} battery low"
+      name: "Battery Low"
     bypass_active:
-      name: "${name} bypass active"
+      name: "Bypass Active"
     ups_failed:
-      name: "${name} ups failed"
+      name: "UPS Failed"
     ups_type_standby:
-      name: "${name} ups type standby"
+      name: "UPS Type Standby"
     test_in_progress:
-      name: "${name} test in progress"
+      name: "Test in progress"
     shutdown_active:
-      name: "${name} shutdown active"
+      name: "Shutdown Active"
     beeper_on:
-      name: "${name} beeper on"
+      name: "Beeper On"
 
 sensor:
   - platform: powermust
     powermust_id: powermust0
     grid_voltage:
-      name: "${name} grid voltage"
+      name: "Grid Voltage"
     grid_fault_voltage:
-      name: "${name} grid fault voltage"
+      name: "Grid Fault Voltage"
     ac_output_voltage:
-      name: "${name} ac output voltage"
+      name: "AC Output Voltage"
     ac_output_load_percent:
-      name: "${name} ac output load percent"
+      name: "AC Output Load Percent"
     grid_frequency:
-      name: "${name} grid frequency"
+      name: "Grid Frequency"
     battery_voltage:
-      name: "${name} battery voltage"
-    temperature:
-      name: "${name} temperature"
-    # ac_output_rating_voltage:
-    #   name: "${name} ac output rating voltage"
-    # ac_output_rating_current:
-    #   name: "${name} ac output rating current"
-    # battery_rating_voltage:
-    #   name: "${name} battery rating voltage"
-    # ac_output_rating_frequency:
-    #   name: "${name} ac output rating frequency"
+      name: "Battery Voltage"
+    #temperature:
+    #  name: "temperature"
+    ac_output_rating_voltage:
+      name: "AC Output Rating Voltage"
+    ac_output_rating_current:
+      name: "AC Output Rating Current"
+    battery_rating_voltage:
+      name: "Battery Rating Voltage"
+    ac_output_rating_frequency:
+      name: "AC Output Rating Frequency"
 
 switch:
   - platform: powermust
     powermust_id: powermust0
     beeper:
-      name: "${name} beeper"
+      name: "Beeper"
     quick_test:
-      name: "${name} quick test"
-    # Unsupported by Powermust 800 USB
-    # deep_test:
-    #   name: "${name} deep test"
-    # ten_minutes_test:
-    #   name: "${name} 10min test"
+      name: "Quick Test"
+    deep_test:
+      name: "Deep Test"
+    ten_minutes_test:
+      name: "10min Test"
+    shutdown:
+      name: "Apagar UPS en 3 minutos"
+      on_command: "S03"
+    shutdown_restore:
+      name: "Apagar 2 min + Restaurar en 1 hora"
+      on_command: "S02R0060"
+    cancel_shutdown:
+      name: "Cancelar Apagado"
 
-text_sensor:
-  - platform: powermust
-    powermust_id: powermust0
-    last_q1:
-      name: "${name} last q1"
-    last_f:
-      name: "${name} last f"
+number:
+  - platform: template
+    name: "Minutos para apagar"
+    min_value: 1
+    max_value: 99
+    step: 1
+    optimistic: true
+    set_action:
+      - lambda: |-
+          char cmd[4];
+          sprintf(cmd, "S%02d", (int)x);
+          ESP_LOGI("powermust", "Enviando apagado en %d minutos: %s", (int)x, cmd);
+          id(powermust0).switch_command(cmd);
+
+#text_sensor:
+#  - platform: powermust
+#    powermust_id: powermust0
+#    last_q1:
+#      name: "last q1"
+#    last_f:
+#      name: "last f"
