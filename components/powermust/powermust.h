@@ -138,15 +138,10 @@ class Powermust : public uart::UARTDevice, public PollingComponent {
   PollingCommand used_polling_commands_[15];
 
   // ------------------- VARIABLES DE LOS SWITCHES -------------------
-  switch_::Switch *beeper_switch_{nullptr};
-  switch_::Switch *quick_test_switch_{nullptr};
-  switch_::Switch *deep_test_switch_{nullptr};
-  switch_::Switch *ten_minutes_test_switch_{nullptr};
 
   switch_::Switch *shutdown_switch_{nullptr};
   switch_::Switch *shutdown_restore_switch_{nullptr};
   switch_::Switch *cancel_shutdown_switch_{nullptr};
-  text_sensor::TextSensor *ups_info_{nullptr};
 };
 
 }  // namespace powermust
